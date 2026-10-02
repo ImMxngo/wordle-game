@@ -71,12 +71,7 @@ const store = {
 };
 
 createModule({
-  locateFile: function(path) {
-    if (path.endsWith('.wasm')) {
-      return 'game.wasm';
-    }
-    return path;
-  }
+  locateFile: path => "./" + path
 }).then(M => {
   const game = new M.Game();
   const saved = store.get();
