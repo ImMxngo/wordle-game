@@ -73,10 +73,10 @@ const store = {
 createModule({
   locateFile: path => "./" + path
 }).then(M => {
-  const game = new M.Game(), day = game.day();
+  const game = new M.Game();
   const saved = store.get();
   const stats = saved.stats || { played: 0, wins: 0, streak: 0 };
-  const guesses = saved.day === day ? saved.guesses : [];
+  const guesses = [];
   let row = 0, cur = "";
 
   const say = t => { msg.textContent = t; };
@@ -159,7 +159,7 @@ createModule({
       if (game.status() === 1) { stats.wins++; stats.streak++; } else stats.streak = 0;
       setTimeout(endMsg, 1500);
     }
-    store.set({ day, guesses, stats });
+    store.set({ guesses, stats });
   }
 
   function press(k) {
