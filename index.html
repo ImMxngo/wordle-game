@@ -76,7 +76,7 @@ createModule({
   const game = new M.Game();
   const saved = store.get();
   const stats = saved.stats || { played: 0, wins: 0, streak: 0 };
-  const guesses = [];
+  let guesses = [];
   let row = 0, cur = "";
 
   const say = t => { msg.textContent = t; };
@@ -92,32 +92,42 @@ createModule({
     btn.textContent = "Play Again";
     btn.style.cssText = "margin-top: 12px; padding: 10px 20px; font-size: 1rem; cursor: pointer; background: var(--g); color: white; border: none; border-radius: 6px;";
     btn.onclick = () => {
-      game.reset();
-      row = 0;
-      cur = "";
-      guesses = [];
-      
-      // Clear all tiles completely
-      tiles.forEach(t => {
-        t.textContent = "";
-        t.className = "tile";
-        t.style.animationDelay = "";
-        t.style.removeProperty("animation-delay");
-        t.classList.remove("on", "flip", "shake");
-        delete t.dataset.s;
-      });
-      
-      // Clear keyboard colors
-      Object.values(keys).forEach(k => {
-        delete k.dataset.s;
-      });
-      
-      btn.remove();
-      say("Guess the word in six tries.");
-      
-      // Force a complete redraw
-      showTyping();
-    };
+  console.log("Play Again button clicked!");
+  console.log("game.reset exists:", typeof game.reset);
+  
+  try {
+    game.reset();
+    console.log("game.reset() called successfully");
+    
+    row = 0;
+    cur = "";
+    guesses = [];
+    
+    // Clear all tiles completely
+    tiles.forEach(t => {
+      t.textContent = "";
+      t.className = "tile";
+      t.style.animationDelay = "";
+      t.style.removeProperty("animation-delay");
+      t.classList.remove("on", "flip", "shake");
+      delete t.dataset.s;
+    });
+    
+    // Clear keyboard colors
+    Object.values(keys).forEach(k => {
+      delete k.dataset.s;
+    });
+    
+    btn.remove();
+    say("Guess the word in six tries.");
+    
+    // Force a complete redraw
+    showTyping();
+    console.log("Reset complete");
+  } catch (err) {
+    console.error("Error during reset:", err);
+  }
+};
     msg.after(btn);  // <-- THIS LINE WAS MISSING - it actually adds the button to the page
   }
 };
