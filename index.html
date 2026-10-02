@@ -70,7 +70,9 @@ const store = {
   set(v) { try { localStorage.setItem("fiveletters", JSON.stringify(v)); } catch {} }
 };
 
-createModule().then(M => {
+createModule({
+  locateFile: path => "./" + path
+}).then(M => {
   const game = new M.Game(), day = game.day();
   const saved = store.get();
   const stats = saved.stats || { played: 0, wins: 0, streak: 0 };
@@ -159,7 +161,12 @@ createModule().then(M => {
     if (res.length === 5) paint(row++, g, res, false);
   }
   game.status() ? endMsg() : say("Guess the word in six tries.");
+
+}).catch(err => {
+  console.error("Game initialization failed:", err);
+  msg.textContent = "Failed to load the game.";
 });
+
 </script>
 </body>
 </html>
