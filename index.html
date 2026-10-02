@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Five Letters</title>
+<style>
+:root{--bg:#e8edf3;--ink:#16202c;--tile:#fff;--line:#c3ccd8;--key:#cfd7e2;--g:#1f8a70;--y:#d99a14;--x:#6b7684}
+@media (prefers-color-scheme:dark){:root{--bg:#121923;--ink:#e8edf3;--tile:#1b2533;--line:#34425a;--key:#34425a}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Avenir Next",Futura,system-ui,sans-serif;
+  display:flex;flex-direction:column;align-items:center;
+  padding:env(safe-area-inset-top) 8px env(safe-area-inset-bottom)}
+h1{font-size:1.5rem;font-weight:800;letter-spacing:.04em;margin:14px 0 4px}
+#msg{min-height:2.6rem;text-align:center;font-size:.9rem;padding:0 12px}
+#grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:min(320px,86vw)}
+.tile{aspect-ratio:1;display:grid;place-items:center;border:2px solid var(--line);
+  background:var(--tile);font-size:1.9rem;font-weight:800;text-transform:uppercase}
+.tile.on{border-color:var(--ink)}
+#kb{margin-top:auto;padding-bottom:12px;width:100%;max-width:500px}
+.row{display:flex;gap:5px;justify-content:center;margin-top:6px}
+.key{flex:1;max-width:44px;height:52px;border:0;border-radius:6px;background:var(--key);
+  color:var(--ink);font-family:inherit;font-size:.9rem;font-weight:700;text-transform:uppercase;cursor:pointer}
+.key.wide{flex:1.6;max-width:66px;font-size:.75rem}
+.key:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.tile[data-s],.key[data-s]{color:#fff;border-color:transparent}
+[data-s="0"]{background:var(--x)}
+[data-s="1"]{background:var(--y)}
+[data-s="2"]{background:var(--g)}
+.flip{animation:flip .5s ease both}
+.shake{animation:shake .3s}
+@keyframes flip{50%{transform:scaleY(0)}}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+@media (prefers-reduced-motion:reduce){.flip,.shake{animation:none}}
+</style>
+</head>
+<body>
+<h1>Five Letters</h1>
+<div id="msg">Loading…</div>
+<div id="grid"></div>
+<div id="kb"></div>
+
+<script src="game.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const grid = $("grid"), kb = $("kb"), msg = $("msg");
+
+// Build the 6x5 grid and on-screen keyboard.
+for (let i = 0; i < 30; i++) grid.insertAdjacentHTML("beforeend", '<div class="tile"></div>');
+const tiles = [...grid.children], keys = {};
+for (const layout of ["qwertyuiop", "asdfghjkl", "+zxcvbnm-"]) {
+  const row = document.createElement("div");
+  row.className = "row";
+  for (const ch of layout) {
+    const k = ch === "+" ? "Enter" : ch === "-" ? "Backspace" : ch;
+    const b = document.createElement("button");
+    b.className = "key" + (k.length > 1 ? " wide" : "");
+    b.textContent = k === "Backspace" ? "⌫" : k;
+    b.dataset.k = k;
+    keys[k] = b;
+    row.append(b);
+  }
+  kb.append(row);
+}
+
+// Saved progress and stats (storage can fail, so every access is guarded).
+const store = {
+  get() { try { return JSON.parse(localStorage.getItem("fiveletters")) || {}; } catch { return {}; } },
+  set(v) { try { localStorage.setItem("fiveletters", JSON.stringify(v)); } catch {} }
+};
+
+createModule().then(M => {
+  const game = new M.Game(), day = game.day();
+  const saved = store.get();
+  const stats = saved.stats || { played: 0, wins: 0, streak: 0 };
+  const guesses = saved.day === day ? saved.guesses : [];
+  let row = 0, cur = "";
+
+  const say = t => { msg.textContent = t; };
+  const endMsg = () => say(
+    (game.status() === 1 ? `Solved in ${guesses.length}.` : `The word was ${game.answer().toUpperCase()}.`) +
+    ` Streak ${stats.streak}, won ${stats.wins} of ${stats.played}.`);
+
+  function showTyping() {
+    for (let c = 0; c < 5; c++) {
+      const t = tiles[row * 5 + c];
+      t.textContent = cur[c] || "";
+      t.classList.toggle("on", !!cur[c]);
+    }
+  }
+
+  // Colors one finished row; res comes straight from C++ ("0", "1", "2" per tile).
+  function paint(r, g, res, animate) {
+    for (let c = 0; c < 5; c++) {
+      const t = tiles[r * 5 + c], k = keys[g[c]], v = +res[c];
+      t.textContent = g[c];
+      t.classList.remove("on");
+      const apply = () => {
+        t.dataset.s = v;
+        if (v > +(k.dataset.s ?? -1)) k.dataset.s = v;
+      };
+      if (animate) {
+        t.style.animationDelay = c * 0.25 + "s";
+        t.classList.add("flip");
+        setTimeout(apply, c * 250 + 250);
+      } else apply();
+    }
+  }
+
+  function reject(text) {
+    say(text);
+    for (let c = 0; c < 5; c++) {
+      const t = tiles[row * 5 + c];
+      t.classList.remove("shake");
+      void t.offsetWidth;
+      t.classList.add("shake");
+    }
+  }
+
+  function submit() {
+    if (cur.length < 5) return reject("Too short");
+    const g = cur, res = game.submitGuess(g);   // <- all scoring happens in C++
+    if (res === "invalid") return reject("Not in the word list");
+    paint(row, g, res, true);
+    guesses.push(g);
+    row++; cur = "";
+    if (game.status()) {
+      stats.played++;
+      if (game.status() === 1) { stats.wins++; stats.streak++; } else stats.streak = 0;
+      setTimeout(endMsg, 1500);
+    }
+    store.set({ day, guesses, stats });
+  }
+
+  function press(k) {
+    if (game.status()) return;
+    if (k === "Enter") return submit();
+    if (k === "Backspace") cur = cur.slice(0, -1);
+    else if (/^[a-z]$/.test(k) && cur.length < 5) cur += k;
+    say("");
+    showTyping();
+  }
+
+  kb.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    b.blur();   // stops a later Enter keypress from re-clicking this button
+    press(b.dataset.k);
+  });
+  addEventListener("keydown", e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    press(e.key.length === 1 ? e.key.toLowerCase() : e.key);
+  });
+
+  // Restore today's saved guesses by replaying them through the C++ game.
+  for (const g of guesses) {
+    const res = game.submitGuess(g);
+    if (res.length === 5) paint(row++, g, res, false);
+  }
+  game.status() ? endMsg() : say("Guess the word in six tries.");
+});
+</script>
+</body>
+</html>
