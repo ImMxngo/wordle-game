@@ -80,9 +80,36 @@ createModule({
   let row = 0, cur = "";
 
   const say = t => { msg.textContent = t; };
-  const endMsg = () => say(
+ const endMsg = () => {
+  say(
     (game.status() === 1 ? `Solved in ${guesses.length}.` : `The word was ${game.answer().toUpperCase()}.`) +
     ` Streak ${stats.streak}, won ${stats.wins} of ${stats.played}.`);
+  
+  // Add play again button
+  if (!document.getElementById("playAgain")) {
+    const btn = document.createElement("button");
+    btn.id = "playAgain";
+    btn.textContent = "Play Again";
+    btn.style.cssText = "margin-top: 12px; padding: 10px 20px; font-size: 1rem; cursor: pointer; background: var(--g); color: white; border: none; border-radius: 6px;";
+    btn.onclick = () => {
+      game.reset();
+      row = 0;
+      cur = "";
+      guesses = [];
+      tiles.forEach(t => {
+        t.textContent = "";
+        t.className = "tile";
+        delete t.dataset.s;
+      });
+      Object.values(keys).forEach(k => {
+        delete k.dataset.s;
+      });
+      btn.remove();
+      say("Guess the word in six tries.");
+    };
+    msg.after(btn);
+  }
+};
 
   function showTyping() {
     for (let c = 0; c < 5; c++) {
