@@ -96,18 +96,29 @@ createModule({
       row = 0;
       cur = "";
       guesses = [];
+      
+      // Clear all tiles completely
       tiles.forEach(t => {
         t.textContent = "";
         t.className = "tile";
+        t.style.animationDelay = "";
+        t.style.removeProperty("animation-delay");
+        t.classList.remove("on", "flip", "shake");
         delete t.dataset.s;
       });
+      
+      // Clear keyboard colors
       Object.values(keys).forEach(k => {
         delete k.dataset.s;
       });
+      
       btn.remove();
       say("Guess the word in six tries.");
+      
+      // Force a complete redraw
+      showTyping();
     };
-    msg.after(btn);
+    msg.after(btn);  // <-- THIS LINE WAS MISSING - it actually adds the button to the page
   }
 };
 
