@@ -25,7 +25,7 @@ jobs:
       - name: Compile C++ to WebAssembly
         run: |
           mkdir site
-          emcc game.cpp -o site/game.js -lembind -O2 -std=c++17 \
+          em++ game.cpp -o site/game.js -lembind -O2 -std=c++17 \
             -sMODULARIZE -sEXPORT_NAME=createModule
           cp index.html site/
 
