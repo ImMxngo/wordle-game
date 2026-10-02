@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir site
           em++ game.cpp -o site/game.js -lembind -O2 -std=c++17 \
-            -sMODULARIZE -sEXPORT_NAME=createModule
+            -sMODULARIZE -sEXPORT_NAME=createModule -sALLOW_MEMORY_GROWTH=1 -sINITIAL_HEAP=32MB
           cp index.html site/
 
       - uses: actions/upload-pages-artifact@v3
